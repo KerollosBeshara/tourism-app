@@ -4,11 +4,13 @@ namespace Modules\Core\Providers;
 
 use Nwidart\Modules\Support\ModuleServiceProvider;
 use Illuminate\Console\Scheduling\Schedule;
+use Modules\Core\Providers\EventServiceProvider;
+use Modules\Core\Providers\RouteServiceProvider;
 
 class CoreServiceProvider extends ModuleServiceProvider
 {
     /**
-     * The name of the module.
+     * The name of the module.x
      */
     protected string $name = 'Core';
 
@@ -43,4 +45,10 @@ class CoreServiceProvider extends ModuleServiceProvider
     // {
     //     $schedule->command('inspire')->hourly();
     // }
+
+    public function register(): void
+    {
+        // Register the ImageService as a singleton so it's available globally
+        $this->app->singleton(\Modules\Core\Services\ImageService::class);
+    }
 }

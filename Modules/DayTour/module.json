@@ -1,0 +1,11 @@
+{
+    "name": "DayTour",
+    "alias": "daytour",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\DayTour\\Providers\\DayTourServiceProvider"
+    ],
+    "files": []
+}

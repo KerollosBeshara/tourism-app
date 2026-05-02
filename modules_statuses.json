@@ -1,3 +1,6 @@
 {
-    "Core": true
+    "Core": true,
+    "Geo": true,
+    "Master": true,
+    "DayTour": true
 }

@@ -1,0 +1,30 @@
+{
+    "name": "nwidart/daytour",
+    "description": "",
+    "authors": [
+        {
+            "name": "Nicolas Widart",
+            "email": "n.widart@gmail.com"
+        }
+    ],
+    "extra": {
+        "laravel": {
+            "providers": [],
+            "aliases": {
+
+            }
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\DayTour\\": "app/",
+            "Modules\\DayTour\\Database\\Factories\\": "database/factories/",
+            "Modules\\DayTour\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\DayTour\\Tests\\": "tests/"
+        }
+    }
+}
