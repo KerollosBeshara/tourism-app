@@ -7,7 +7,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Attributes\WithoutRelations;
 use Illuminate\Queue\Attributes\DeleteWhenMissing;
 use Modules\DayTour\Models\DayTourImage;
-use Modules\Core\Services\ImageService;
+use App\Services\ImageService;
 
 #[DeleteWhenMissing]
 class DeleteDayTourImageJob implements ShouldQueue

@@ -11,7 +11,6 @@ class Country extends Model
     protected $table = 'countries';
 
     protected $fillable = [
-        'id',
         'iso_code',
         'emoji_flag',
         'name_translations',
@@ -20,6 +19,17 @@ class Country extends Model
     protected $casts = [
         'name_translations' => 'array',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::creating(function (Country $country) {
+            // Automatically generate the Primary Key from the incoming ISO Code
+            $country->id = strtoupper(trim($country->iso_code));
+        });
+    }
 
     /**
      * Scope to find country by ISO code
@@ -39,7 +49,7 @@ class Country extends Model
         }
 
         foreach ($this->name_translations as $translation) {
-            if ($translation['locale'] === $locale) {
+            if (isset($translation['locale']) && $translation['locale'] === $locale) {
                 return $translation['value'];
             }
         }

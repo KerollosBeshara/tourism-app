@@ -43,6 +43,14 @@ class DayTour extends Model
     ];
 
     /**
+     * Get the agency that owns this day tour
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(\Modules\Core\Models\Agency::class, 'agency_id');
+    }
+
+    /**
      * Get the city that owns this day tour
      */
     public function city(): BelongsTo
@@ -55,7 +63,7 @@ class DayTour extends Model
      */
     public function destination(): BelongsTo
     {
-        return $this->belongsTo(\Modules\Master\Models\Destination::class, 'destination_id');
+        return $this->belongsTo(\Modules\Geo\Models\Destination::class, 'destination_id');
     }
 
     /**
@@ -71,10 +79,10 @@ class DayTour extends Model
     /**
      * Get the primary image for this day tour
      */
-    public function primaryImage(): HasMany
-    {
-        return $this->images()->where('is_primary', true)->limit(1);
-    }
+    // public function primaryImage(): HasMany
+    // {
+    //     return $this->images()->where('is_primary', true)->limit(1);
+    // }
 
     /**
      * Get title in specific locale

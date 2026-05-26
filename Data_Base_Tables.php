@@ -113,16 +113,16 @@ Geo_Module{
     created_at timestamp
     deleted_at timestamp
   }
-  destinations [icon: map, color: green] {
+
+  Table destinations [icon: map, color: green] {
     id string [pk]
     agency_id string [ref: > agencies.id]
     country_id string [ref: > countries.id]
     slug string
-    name_translations jsonb
+    title_translations jsonb
     description_translations jsonb
     map_data jsonb
     geojson jsonb
-    tourism_info jsonb
     regional_data jsonb
     country_code string
     view_count int [default: 0]
@@ -130,6 +130,35 @@ Geo_Module{
     created_at timestamp
     updated_at timestamp
     deleted_at timestamp 
+  }
+
+  Table destination_tourism_items {
+    id string [pk]
+    destination_id string [ref: > destinations.id]
+    sort_order int [default: 0]
+    icon string
+    title_translations jsonb
+    description_translations jsonb
+    created_at timestamp
+    updated_at timestamp
+  }
+
+  // Centralized Media Table for Photos & Videos
+  Table destination_media [icon: image, color: blue] {
+    id string [pk]
+    destination_id string [ref: > destinations.id] // Direct foreign key constraint
+    
+    type string [note: 'e.g., "photo", "video_link"']
+    url string [note: 'S3 public URL, CDN path, YouTube, or Vimeo link']
+    
+    // Captions/Alt text for SEO & Accessibility (Multi-language)
+    caption_translations jsonb [note: 'e.g., {"en": "Beautiful sunset", "ar": "غروب الشمس"}']
+    
+    sort_order int [default: 0, note: 'For ordering photos in a gallery or slider']
+    is_featured boolean [default: false, note: 'True if this is the main cover photo or hero video']
+    
+    created_at timestamp
+    updated_at timestamp
   }
   agency_destination {
     id varchar [pk]

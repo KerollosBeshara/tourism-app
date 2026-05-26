@@ -14,9 +14,9 @@ class StoreDayTourRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'agency_id' => ['required', 'uuid', 'exists:agencies,id'],
-            'city_id' => ['required', 'integer', 'exists:cities,id'],
-            'destination_id' => ['required', 'integer', 'exists:destinations,id'],
+            'agency_id' => ['required', 'string', 'exists:agencies,id'],
+            'city_id' => ['required', 'string', 'exists:cities,id'],
+            'destination_id' => ['required', 'string', 'exists:destinations,id'],
             'title_translations' => ['required', 'array', 'min:1'],
             'title_translations.*.locale' => ['required', 'string', 'in:en,ar'],
             'title_translations.*.value' => ['required', 'string', 'min:3', 'max:255'],
@@ -32,9 +32,11 @@ class StoreDayTourRequest extends FormRequest
     {
         return [
             'agency_id.required' => 'Agency ID is required',
-            'agency_id.uuid' => 'Agency ID must be a valid UUID',
+            'agency_id.exists' => 'Agency not found',
             'city_id.required' => 'City is required',
+            'city_id.exists' => 'City not found',
             'destination_id.required' => 'Destination is required',
+            'destination_id.exists' => 'Destination not found',
             'title_translations.required' => 'Title translations are required',
             'title_translations.*.value.min' => 'Title must be at least 3 characters',
             'description_translations.required' => 'Description translations are required',
@@ -42,13 +44,15 @@ class StoreDayTourRequest extends FormRequest
         ];
     }
 
-    public function validated(): array
+    public function validated($key = null, $default = null)
     {
-        $data = parent::validated();
+        $data = parent::validated($key, $default);
         
-        // Ensure translations are properly formatted
-        $data['title_translations'] = $this->normalizeTranslations($data['title_translations'] ?? []);
-        $data['description_translations'] = $this->normalizeTranslations($data['description_translations'] ?? []);
+        if (is_array($data)) {
+            // Ensure translations are properly formatted
+            $data['title_translations'] = $this->normalizeTranslations($data['title_translations'] ?? []);
+            $data['description_translations'] = $this->normalizeTranslations($data['description_translations'] ?? []);
+        }
 
         return $data;
     }

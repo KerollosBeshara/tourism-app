@@ -7,12 +7,13 @@ use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough; // 1. FIXED: Imported the through-relation class
 use Modules\Core\Models\User;
+// use Modules\Core\Models\Agency; // Uncomment and adjust if your Agency model sits in a different path/namespace
 
 class Account extends Authenticatable
 {
     use HasApiTokens, Notifiable, HasFactory;
-
 
     public function withAccessToken($accessToken)
     {
@@ -20,7 +21,6 @@ class Account extends Authenticatable
         return $this;
     }
 
-    
     /**
      * Set to false because we are using ULIDs (strings), not auto-incrementing integers.
      * This prevents PHP from trying to cast the ID to an integer, which causes crashes.
@@ -83,17 +83,28 @@ class Account extends Authenticatable
         'is_super_admin' => 'boolean',
     ];
 
-    
-
     /**
-     * Relationship: An Account can have many associated User profiles.
+     * Relationship: An Account can have many associated User workspace profiles.
      */
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'account_id', 'id');
     }
 
-
-    
-    
+    /**
+     * Relationship: Access the tenant Agency workspace through the User profile bridge.
+     * Maps across the string columns on your users table.
+     */
+    public function agency(): HasOneThrough
+    {
+        // 2. FIXED: Implemented HasOneThrough with correct structural parameters
+        return $this->hasOneThrough(
+            Agency::class,       // Target: The model we want to fetch
+            User::class,         // Through: The bridge model containing keys
+            'account_id',        // Foreign key on intermediate table (users)
+            'id',                // Foreign key on target table (agencies)
+            'id',                // Local key on this table (accounts)
+            'agency_id'          // Local key on intermediate table (users)
+        );
+    }
 }

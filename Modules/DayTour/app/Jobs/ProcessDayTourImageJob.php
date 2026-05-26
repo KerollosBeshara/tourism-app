@@ -6,7 +6,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\Attributes\WithoutRelations;
 use Illuminate\Queue\Attributes\DeleteWhenMissing;
-use Modules\Core\Services\ImageService;
+use App\Services\ImageService;
 use Modules\DayTour\Models\DayTour;
 use Modules\DayTour\Models\DayTourImage;
 

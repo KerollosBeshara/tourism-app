@@ -4,6 +4,7 @@ namespace Modules\DayTour\Repositories;
 
 use Modules\DayTour\Models\DayTour;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class DayTourRepository
 {
@@ -18,7 +19,7 @@ class DayTourRepository
     /**
      * Get all active day tours
      */
-    public function getActive(int $perPage = 15): Paginator
+    public function getActive(int $perPage = 15): LengthAwarePaginator
     {
         return DayTour::active()
             ->with('images', 'city', 'destination')
@@ -29,7 +30,7 @@ class DayTourRepository
     /**
      * Get day tours by agency
      */
-    public function getByAgency(string $agencyId, int $perPage = 15): Paginator
+    public function getByAgency(string $agencyId, int $perPage = 15): LengthAwarePaginator
     {
         return DayTour::byAgency($agencyId)
             ->active()
@@ -41,7 +42,7 @@ class DayTourRepository
     /**
      * Get day tours by city
      */
-    public function getByCity(int $cityId, int $perPage = 15): Paginator
+    public function getByCity(int $cityId, int $perPage = 15): LengthAwarePaginator
     {
         return DayTour::byCity($cityId)
             ->active()
@@ -53,7 +54,7 @@ class DayTourRepository
     /**
      * Get day tours by destination
      */
-    public function getByDestination(int $destinationId, int $perPage = 15): Paginator
+    public function getByDestination(int $destinationId, int $perPage = 15): LengthAwarePaginator
     {
         return DayTour::byDestination($destinationId)
             ->active()
@@ -65,7 +66,7 @@ class DayTourRepository
     /**
      * Get shared day tours
      */
-    public function getShared(int $perPage = 15): Paginator
+    public function getShared(int $perPage = 15): LengthAwarePaginator
     {
         return DayTour::shared()
             ->active()
@@ -77,7 +78,7 @@ class DayTourRepository
     /**
      * Get recent day tours
      */
-    public function getRecent(int $days = 30, int $perPage = 15): Paginator
+    public function getRecent(int $days = 30, int $perPage = 15): LengthAwarePaginator
     {
         return DayTour::recent($days)
             ->active()
@@ -89,7 +90,7 @@ class DayTourRepository
     /**
      * Search day tours
      */
-    public function search(array $filters, int $perPage = 15): Paginator
+    public function search(array $filters, int $perPage = 15): LengthAwarePaginator
     {
         $query = DayTour::query()
             ->with('images', 'city', 'destination')

@@ -48,7 +48,11 @@ class CoreServiceProvider extends ModuleServiceProvider
 
     public function register(): void
     {
+
+        foreach ($this->providers as $provider) {
+            $this->app->register($provider);
+        }
         // Register the ImageService as a singleton so it's available globally
-        $this->app->singleton(\Modules\Core\Services\ImageService::class);
+        $this->app->singleton(\App\Services\ImageService::class);
     }
 }

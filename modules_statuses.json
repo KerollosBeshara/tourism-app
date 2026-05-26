@@ -2,5 +2,6 @@
     "Core": true,
     "Geo": true,
     "Master": true,
-    "DayTour": true
+    "DayTour": true,
+    "Media": true
 }

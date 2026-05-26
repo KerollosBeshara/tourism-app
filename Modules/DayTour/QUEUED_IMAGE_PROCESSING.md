@@ -433,7 +433,7 @@ Check job logs:
 
 ## Related Files
 
-- Core ImageService: `/Modules/Core/app/Services/ImageService.php`
+- Core ImageService: `/app/Services/ImageService.php`
 - Jobs: `/Modules/DayTour/app/Jobs/`
 - Controller: `/Modules/DayTour/app/Http/Controllers/DayTourController.php`
 - Actions: `/Modules/DayTour/app/Actions/UploadDayTourImageAction.php`

@@ -13,7 +13,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Force Laravel to bind the v4 ImageManager with the GD driver
+        $this->app->singleton(ImageManager::class, function ($app) {
+            return new ImageManager(new Driver());
+        });
     }
 
     /**

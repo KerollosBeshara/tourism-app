@@ -15,6 +15,7 @@ class GeoDatabaseSeeder extends Seeder
             CountriesSeed::class,
             CurrenciesSeeder::class,
             LanguagesSeeder::class,
+            DestinationSeeder::class,
         ]);
     }
 }

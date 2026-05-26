@@ -35,10 +35,19 @@ class UploadDayTourImageAction
             'sort_order' => $sortOrder ?? 0,
         ]);
 
+        // Save file to local temp disk for async processing
+        $filePath = $file->storeAs(
+            'temp',
+            uniqid('daytour_') . '_' . $file->getClientOriginalName(),
+            'local'
+        );
+
         // Dispatch upload job to queue for async processing
         dispatch(new UploadDayTourImageJob(
             $dayTour->id,
-            $file,
+            $filePath,
+            $file->getClientOriginalName(),
+            $file->getMimeType(),
             $isPrimary,
             $sortOrder
         ))->onQueue($queue);
@@ -82,15 +91,24 @@ class UploadDayTourImageAction
         bool $isPrimary = false,
         ?int $sortOrder = null
     ): DayTourImage {
+        // Save file to local disk
+        $filePath = $file->storeAs(
+            'temp',
+            uniqid('daytour_') . '_' . $file->getClientOriginalName(),
+            'local'
+        );
+
         $job = new UploadDayTourImageJob(
             $dayTour->id,
-            $file,
+            $filePath,
+            $file->getClientOriginalName(),
+            $file->getMimeType(),
             $isPrimary,
             $sortOrder
         );
 
         // Execute synchronously
-        $job->handle(app(\Modules\Core\Services\ImageService::class));
+        $job->handle(app(\App\Services\ImageService::class));
 
         return DayTourImage::where('day_tour_id', $dayTour->id)
             ->orderByDesc('created_at')

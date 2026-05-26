@@ -8,7 +8,10 @@ use Illuminate\Validation\ValidationException;
 
 class LoginAction
 {
-    public function execute(string $email, string $password): string
+    /**
+     * Executes the login and returns an object containing the account and token.
+     */
+    public function execute(string $email, string $password): object
     {
         $account = Account::where('email', $email)->first();
 
@@ -21,7 +24,12 @@ class LoginAction
         // Update login timestamp
         $account->update(['last_login_at' => now()]);
 
-        // Generate the high-performance Sanctum token
-        return $account->createToken('api_token')->plainTextToken;
+        // Generate the token
+        $token = $account->createToken('api_token')->plainTextToken;
+
+        return (object) [
+            'account' => $account,
+            'token'   => $token,
+        ];
     }
 }

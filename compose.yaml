@@ -1,7 +1,7 @@
 services:
     laravel.test:
         build:
-            context: "./vendor/laravel/sail/runtimes/8.4"
+            context: "./docker/8.4"
             dockerfile: Dockerfile
             args:
                 WWWGROUP: "${WWWGROUP}"
@@ -24,6 +24,19 @@ services:
         depends_on:
             - pgsql
             - redis
+
+    queue-worker:
+        image: "sail-8.4/app"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        volumes:
+            - ".:/var/www/html"
+        depends_on:
+            - pgsql
+        command: php artisan queue:work --tries=3
+        networks:
+            - sail
+
     pgsql:
         image: "postgres:18-alpine"
         ports:
@@ -35,7 +48,7 @@ services:
             POSTGRES_PASSWORD: "${DB_PASSWORD:-secret}"
         volumes:
             - "sail-pgsql:/var/lib/postgresql"
-            - "./vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql"
+            - "./docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql"
         networks:
             - sail
         healthcheck:
@@ -49,6 +62,7 @@ services:
                 - "${DB_USERNAME}"
             retries: 3
             timeout: 5s
+
     redis:
         image: "redis:alpine"
         ports:
@@ -64,15 +78,18 @@ services:
                 - ping
             retries: 3
             timeout: 5s
+
     adminer:
         image: adminer
         ports:
             - 8080:8080
         networks:
             - sail
+
 networks:
     sail:
         driver: bridge
+
 volumes:
     sail-pgsql:
         driver: local

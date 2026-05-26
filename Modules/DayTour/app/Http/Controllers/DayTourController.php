@@ -3,12 +3,14 @@
 namespace Modules\DayTour\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Traits\ApiResponseTrait;
 use Modules\DayTour\Actions\CreateDayTourAction;
 use Modules\DayTour\Actions\UpdateDayTourAction;
 use Modules\DayTour\Actions\UploadDayTourImageAction;
 use Modules\DayTour\Http\Requests\StoreDayTourRequest;
 use Modules\DayTour\Http\Requests\UpdateDayTourRequest;
 use Modules\DayTour\Http\Requests\UploadDayTourImageRequest;
+use Modules\DayTour\Http\Requests\BulkUploadDayTourImageRequest;
 use Modules\DayTour\Http\Resources\DayTourResource;
 use Modules\DayTour\Http\Resources\DayTourImageResource;
 use Modules\DayTour\Repositories\DayTourRepository;
@@ -16,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 
 class DayTourController extends Controller
 {
+    use ApiResponseTrait;
     public function __construct(
         private DayTourRepository $repository,
         private CreateDayTourAction $createAction,
@@ -49,9 +52,9 @@ class DayTourController extends Controller
     {
         $dayTour = $this->createAction->execute($request->validated());
 
-        return response()->json(
+        return $this->createdResponse(
             new DayTourResource($dayTour),
-            201
+            'Day tour created successfully'
         );
     }
 
@@ -63,10 +66,10 @@ class DayTourController extends Controller
         $dayTour = $this->repository->findById($id);
 
         if (!$dayTour) {
-            return response()->json(['message' => 'Day tour not found'], 404);
+            return $this->notFoundResponse('Day tour not found');
         }
 
-        return response()->json(new DayTourResource($dayTour));
+        return $this->successResponse(new DayTourResource($dayTour));
     }
 
     /**
@@ -77,12 +80,15 @@ class DayTourController extends Controller
         $dayTour = $this->repository->findById($id);
 
         if (!$dayTour) {
-            return response()->json(['message' => 'Day tour not found'], 404);
+            return $this->notFoundResponse('Day tour not found');
         }
 
         $updated = $this->updateAction->execute($dayTour, $request->validated());
 
-        return response()->json(new DayTourResource($updated));
+        return $this->successResponse(
+            new DayTourResource($updated),
+            'Day tour updated successfully'
+        );
     }
 
     /**
@@ -93,12 +99,12 @@ class DayTourController extends Controller
         $dayTour = $this->repository->findById($id);
 
         if (!$dayTour) {
-            return response()->json(['message' => 'Day tour not found'], 404);
+            return $this->notFoundResponse('Day tour not found');
         }
 
         $this->repository->delete($dayTour);
 
-        return response()->json(['message' => 'Day tour deleted successfully']);
+        return $this->successResponse(null, 'Day tour deleted successfully');
     }
 
     /**
@@ -109,7 +115,15 @@ class DayTourController extends Controller
         $dayTour = $this->repository->findById($dayTourId);
 
         if (!$dayTour) {
-            return response()->json(['message' => 'Day tour not found'], 404);
+            return $this->notFoundResponse('Day tour not found');
+        }
+
+        // Check if day tour already has 6 images
+        if ($dayTour->images->count() >= 6) {
+            return $this->errorResponse(
+                'Maximum 6 images already uploaded for this day tour',
+                422
+            );
         }
 
         $image = $this->uploadImageAction->execute(
@@ -127,6 +141,45 @@ class DayTourController extends Controller
     }
 
     /**
+     * Bulk upload images to day tour (max 6 per request, max 6 total per day tour)
+     */
+    public function bulkUploadImages(BulkUploadDayTourImageRequest $request, string $dayTourId): JsonResponse
+    {
+        $dayTour = $this->repository->findById($dayTourId);
+
+        if (!$dayTour) {
+            return $this->notFoundResponse('Day tour not found');
+        }
+
+        $currentImageCount = $dayTour->images->count();
+        $requestedImageCount = count($request->file('images'));
+        $totalImageCount = $currentImageCount + $requestedImageCount;
+
+        // Check if total would exceed 6 images
+        if ($totalImageCount > 6) {
+            return $this->errorResponse(
+                "Cannot upload {$requestedImageCount} images. Day tour already has {$currentImageCount} images. Maximum total is 6 images.",
+                422
+            );
+        }
+
+        // Mark first as primary only if no primary image exists and it's the first batch
+        $shouldMarkFirstAsPrimary = $currentImageCount === 0;
+
+        $images = $this->uploadImageAction->uploadBatch(
+            $dayTour,
+            $request->file('images'),
+            $shouldMarkFirstAsPrimary,
+            $request->input('queue', 'images')
+        );
+
+        return response()->json([
+            'data' => DayTourImageResource::collection($images),
+            'message' => count($images) . ' images queued for processing',
+        ], 202); // Accepted (async processing)
+    }
+
+    /**
      * List day tour images
      */
     public function listImages(string $dayTourId): JsonResponse
@@ -134,12 +187,13 @@ class DayTourController extends Controller
         $dayTour = $this->repository->findById($dayTourId);
 
         if (!$dayTour) {
-            return response()->json(['message' => 'Day tour not found'], 404);
+            return $this->notFoundResponse('Day tour not found');
         }
 
-        return response()->json([
-            'data' => DayTourImageResource::collection($dayTour->images),
-        ]);
+        return $this->successResponse(
+            DayTourImageResource::collection($dayTour->images),
+            'Day tour images retrieved successfully'
+        );
     }
 
     /**
@@ -150,13 +204,13 @@ class DayTourController extends Controller
         $dayTour = $this->repository->findById($dayTourId);
 
         if (!$dayTour) {
-            return response()->json(['message' => 'Day tour not found'], 404);
+            return $this->notFoundResponse('Day tour not found');
         }
 
         $image = $dayTour->images()->find($imageId);
 
         if (!$image) {
-            return response()->json(['message' => 'Image not found'], 404);
+            return $this->notFoundResponse('Image not found');
         }
 
         // Dispatch delete job

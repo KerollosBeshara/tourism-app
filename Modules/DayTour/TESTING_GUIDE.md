@@ -117,7 +117,7 @@ class UploadDayTourImageJobTest extends TestCase
         
         // Dispatch job
         $job = new UploadDayTourImageJob($image);
-        $job->handle(app(\Modules\Core\Services\ImageService::class));
+        $job->handle(app(\App\Services\ImageService::class));
         
         // Assert image was processed
         $this->assertNotNull($image->fresh()->s3_path);

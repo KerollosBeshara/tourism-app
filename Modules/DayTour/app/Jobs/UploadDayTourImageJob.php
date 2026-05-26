@@ -5,9 +5,8 @@ namespace Modules\DayTour\Jobs;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Queue\Attributes\WithoutRelations;
 use Illuminate\Queue\Attributes\DeleteWhenMissing;
-use Modules\Core\Services\ImageService;
+use App\Services\ImageService;
 use Modules\DayTour\Models\DayTour;
 use Modules\DayTour\Models\DayTourImage;
 
@@ -21,22 +20,23 @@ class UploadDayTourImageJob implements ShouldQueue
     public int $backoff = 120;
 
     /**
-     * Store the uploaded file in storage to avoid serialization issues
+     * Store the file path and metadata
      */
     private string $filePath;
+    private string $originalFileName;
+    private string $mimeType;
 
     public function __construct(
         public string $dayTourId,
-        UploadedFile $file,
+        string $filePath,
+        string $originalFileName,
+        string $mimeType,
         public bool $isPrimary = false,
         public ?int $sortOrder = null
     ) {
-        // Store file temporarily
-        $this->filePath = $file->storeAs(
-            'temp',
-            $file->getClientOriginalName(),
-            'local'
-        );
+        $this->filePath = $filePath;
+        $this->originalFileName = $originalFileName;
+        $this->mimeType = $mimeType;
     }
 
     /**
@@ -48,80 +48,89 @@ class UploadDayTourImageJob implements ShouldQueue
             // Get the day tour
             $dayTour = DayTour::findOrFail($this->dayTourId);
 
-            // Retrieve the stored file
-            $storagePath = \Storage::disk('local')->path($this->filePath);
-            if (!file_exists($storagePath)) {
-                throw new \Exception('Temporary file not found');
+            // Read file from local disk
+            // $fullPath = \Storage::disk('local')->path($this->filePath);
+            $fullPath = storage_path('app/private/' . $this->filePath);
+
+            \Log::info("Worker checking file:", [
+                'path' => $fullPath,
+                'exists' => file_exists($fullPath),
+                'is_readable' => is_readable($fullPath),
+                'current_user' => posix_getpwuid(posix_geteuid())['name'] ?? 'unknown'
+            ]);
+            
+            if (!file_exists($fullPath)) {
+                throw new \Exception("Temp file not found at: {$this->filePath}");
             }
 
-            // Create UploadedFile from stored path
-            $file = new UploadedFile(
-                $storagePath,
-                basename($this->filePath),
-                mime_content_type($storagePath),
-                null,
-                true
-            );
+            try {
+                // Create UploadedFile from disk path
+                $file = new UploadedFile(
+                    $fullPath,
+                    $this->originalFileName,
+                    $this->mimeType,
+                    null,
+                    true
+                );
 
-            // Process and upload image using Core ImageService
-            $imageData = $imageService->uploadAndOptimize(
-                'day-tours',
-                $this->dayTourId,
-                $file,
-                1200,
-                800,
-                true // Create variants
-            );
+                // Process and upload image to S3
+                $imageData = $imageService->uploadAndOptimize(
+                    'day-tours',
+                    $this->dayTourId,
+                    $file,
+                    1200,
+                    800,
+                    true // Create variants
+                );
 
-            // Create database record
-            $image = DayTourImage::create([
-                'day_tour_id' => $this->dayTourId,
-                's3_path' => $imageData['original']['s3_path'],
-                'filename' => $imageData['original']['filename'],
-                'mime_type' => $imageData['original']['mime_type'],
-                'file_size' => $imageData['original']['file_size'],
-                'disk' => $imageData['original']['disk'],
-                'is_primary' => $this->isPrimary,
-                'sort_order' => $this->sortOrder ?? 0,
-            ]);
+                // Update placeholder record with real S3 paths
+                $image = DayTourImage::where('day_tour_id', $this->dayTourId)
+                    ->where('filename', $this->originalFileName)
+                    ->first();
 
-            // Store thumbnail and medium URLs in meta if needed
-            if (isset($imageData['thumbnail'])) {
-                $image->update([
-                    'meta' => [
-                        'thumbnail_url' => $imageData['thumbnail']['s3_path'],
-                        'medium_url' => $imageData['medium']['s3_path'],
-                    ],
+                if ($image) {
+                    $image->update([
+                        's3_path' => $imageData['original']['s3_path'],
+                        'mime_type' => $imageData['original']['mime_type'],
+                        'file_size' => $imageData['original']['file_size'],
+                        'meta' => [
+                            'thumbnail_url' => $imageData['thumbnail']['s3_path'] ?? null,
+                            'medium_url' => $imageData['medium']['s3_path'] ?? null,
+                        ],
+                    ]);
+                }
+
+                // If marked as primary, unmark others
+                if ($this->isPrimary && $image) {
+                    DayTourImage::where('day_tour_id', $this->dayTourId)
+                        ->where('id', '!=', $image->id)
+                        ->update(['is_primary' => false]);
+                }
+
+                // Dispatch cache invalidation
+                dispatch(new InvalidateDayTourCacheJob($this->dayTourId))->onQueue('cache');
+
+                \Log::info('DayTour image uploaded successfully', [
+                    'image_id' => $image->id ?? 'unknown',
+                    'day_tour_id' => $this->dayTourId,
+                    's3_path' => $imageData['original']['s3_path'],
                 ]);
+
+            } finally {
+                // Clean up temp file from disk
+                // if (\Storage::disk('local')->exists($this->filePath)) {
+                //     \Storage::disk('local')->delete($this->filePath);
+                // }
             }
-
-            // If marked as primary, unmark others
-            if ($this->isPrimary) {
-                DayTourImage::where('day_tour_id', $this->dayTourId)
-                    ->where('id', '!=', $image->id)
-                    ->update(['is_primary' => false]);
-            }
-
-            // Dispatch job to update cache
-            dispatch(new InvalidateDayTourCacheJob($this->dayTourId))->onQueue('cache');
-
-            \Log::info('DayTour image uploaded successfully', [
-                'image_id' => $image->id,
-                'day_tour_id' => $this->dayTourId,
-                's3_path' => $imageData['original']['s3_path'],
-            ]);
 
         } catch (\Exception $e) {
             \Log::error('Failed to upload DayTour image', [
                 'day_tour_id' => $this->dayTourId,
+                'filename' => $this->originalFileName,
+                'file_path' => $this->filePath,
                 'error' => $e->getMessage(),
             ]);
             throw $e;
-        } finally {
-            // Clean up temporary file
-            if (\Storage::disk('local')->exists($this->filePath)) {
-                \Storage::disk('local')->delete($this->filePath);
-            }
         }
     }
 
@@ -132,12 +141,15 @@ class UploadDayTourImageJob implements ShouldQueue
     {
         \Log::error('UploadDayTourImageJob failed', [
             'day_tour_id' => $this->dayTourId,
+            'filename' => $this->originalFileName,
+            'file_path' => $this->filePath,
             'exception' => $exception->getMessage(),
         ]);
 
-        // Clean up on failure
-        if (\Storage::disk('local')->exists($this->filePath)) {
-            \Storage::disk('local')->delete($this->filePath);
-        }
+        // Clean up temp file on failure
+        // if (\Storage::disk('local')->exists($this->filePath)) {
+        //     \Storage::disk('local')->delete($this->filePath);
+        // }
     }
 }
+

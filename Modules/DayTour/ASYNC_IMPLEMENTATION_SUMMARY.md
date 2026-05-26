@@ -2,7 +2,7 @@
 
 ## ✅ Completed Components
 
-### 1. Core Image Service (Modules/Core/app/Services/ImageService.php)
+### 1. Core Image Service (app/Services/ImageService.php)
 
 Enhanced with:
 - **validate()** - File validation (size, MIME type, integrity)

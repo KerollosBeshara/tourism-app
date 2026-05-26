@@ -12,8 +12,10 @@
         "php": "^8.3",
         "intervention/image-laravel": "^4.0",
         "laravel/framework": "^13.0",
+        "laravel/horizon": "^5.47",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "^3.0",
         "nwidart/laravel-modules": "^13.0"
     },
     "require-dev": {

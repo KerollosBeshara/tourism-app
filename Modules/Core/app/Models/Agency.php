@@ -38,4 +38,17 @@ class Agency extends Model
     {
         return $this->belongsTo(AgencyStatus::class, 'agency_status_id', 'id');
     }
+
+    public function languages(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            \Modules\Geo\Models\Language::class, // Target model
+            'agency_languages',                  // Table name
+            'agency_id',                         // Foreign key on pivot referencing Agency
+            'language_id'                        // Foreign key on pivot referencing Language
+        )
+        ->using(\Modules\Geo\Models\AgencyLanguage::class) // Bind the custom Pivot model
+        ->withPivot('id', 'is_default', 'is_active')       // Make pivot properties queryable
+        ->withTimestamps();
+    }
 }
